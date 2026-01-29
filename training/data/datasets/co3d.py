@@ -63,6 +63,14 @@ SEEN_CATEGORIES = [
     "wineglass",
 ]
 
+SINGLE_SEQUENCE_CATEGORIES = [
+    "apple", "backpack", "ball", "banana", "baseballbat", "baseballglove", "bench", "bicycle", 
+    "book", "bottle", "bowl", "broccoli", "cake", "car", "carrot", "cellphone", "chair", "couch", 
+    "cup", "donut", "frisbee", "hairdryer", "handbag", "hotdog", "hydrant", "keyboard", "kite",
+    "laptop", "motorcycle", "mouse", "orange", "parkingmeter", "pizza", "plant", "remote", "sandwich", 
+    "skateboard", "suitcase", "teddybear", "toaster", "toilet", "toybus", "toyplane", "toytrain", 
+    "toytruck", "umbrella", "vase", "wineglass"]
+
 
 class Co3dDataset(BaseDataset):
     def __init__(
@@ -101,7 +109,8 @@ class Co3dDataset(BaseDataset):
         if CO3D_DIR is None or CO3D_ANNOTATION_DIR is None:
             raise ValueError("Both CO3D_DIR and CO3D_ANNOTATION_DIR must be specified.")
 
-        category = sorted(SEEN_CATEGORIES)
+        # category = sorted(SEEN_CATEGORIES)
+        category = sorted(SINGLE_SEQUENCE_CATEGORIES)
 
         if self.debug:
             category = ["apple"]

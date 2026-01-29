@@ -25,7 +25,7 @@ class DynamicTorchDataset(ABC):
         drop_last: bool = True,
         collate_fn: Optional[Callable] = None,
         worker_init_fn: Optional[Callable] = None,
-        persistent_workers: bool = False,
+        persistent_workers: bool = True, #TODO default was False (I guess this makes error during training => some dataloader initialized wrong config)
         seed: int = 42,
         max_img_per_gpu: int = 48,
     ) -> None:
@@ -157,7 +157,11 @@ class DynamicBatchSampler(Sampler):
         """
         sampler_iterator = iter(self.sampler)
 
-        while True:
+        #TODO to fix infinite loop problem dataloader
+        exhuasted = False
+
+        # while True:
+        while not exhuasted:
             try:
                 # Sample random image number and aspect ratio
                 random_image_num = int(np.random.choice(self.possible_nums, p=self.normalized_weights))
@@ -181,6 +185,7 @@ class DynamicBatchSampler(Sampler):
                         item = next(sampler_iterator)  # item is (idx, aspect_ratio, image_num)
                         current_batch.append(item)
                     except StopIteration:
+                        exhuasted = True #TODO try to fix infinite loop problem dataloader, but this was not the problem
                         break  # No more samples
 
                 if not current_batch:

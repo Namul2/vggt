@@ -1,18 +1,17 @@
 defaults:
   - default_dataset.yaml
 
-exp_name: vggt_vkitti_vit_multigpu
+exp_name: exp001
 img_size: 518
-num_workers: 4
+num_workers: 8
 seed_value: 42
 accum_steps: 2    # We did not use gradient accumulation in our training, while if you suffer from OOM, you can try to use it.
 patch_size: 14
 val_epoch_freq: 5
-max_img_per_gpu: 24 # 48 default
+max_img_per_gpu: 48
 
-#TODO about limit batches, I actually don't get it. should I set it null for scratch training?
-limit_train_batches: null # null == training...? for graident accumulation it should be divisible by accum_steps
-limit_val_batches: null # 400
+limit_train_batches: 800
+limit_val_batches: 400
 
 
 data:
@@ -32,14 +31,13 @@ data:
         - _target_: data.datasets.vkitti.VKittiDataset
           split: train
           VKitti_DIR: /hdd/dataset/ff3d_dataset/vkitti
-          len_train: 1000
+          len_train: 100000
           expand_ratio: 8 
         # - _target_: data.datasets.co3d.Co3dDataset
         #   split: train
         #   CO3D_DIR: /hdd/dataset/ff3d_dataset/co3dv2
         #   CO3D_ANNOTATION_DIR: /hdd/dataset/ff3d_dataset/co3d_anno
         #   len_train: 100000
-
   val:
     _target_: data.dynamic_dataloader.DynamicTorchDataset
     num_workers: ${num_workers}
@@ -96,8 +94,8 @@ logging:
 
 checkpoint:
   save_dir: logs/${exp_name}/ckpts
-  save_freq: 3
-  resume_checkpoint_path: null # null == from scratch
+  save_freq: 5
+  resume_checkpoint_path: /YOUR/PATH/TO/CKPT
   strict: False
 
 
@@ -126,11 +124,11 @@ optim:
 
   optimizer:
     _target_: torch.optim.AdamW
-    lr: 1e-4 # 5e-5
+    lr: 5e-5
     weight_decay: 0.05
 
-  frozen_module_names: [] # from scratch, do not freeze any module
-      # - "*aggregator*"  # example, freeze the aggregator
+  frozen_module_names:
+      - "*aggregator*"  # example, freeze the aggregator
 
   amp:
     enabled: True
@@ -153,12 +151,12 @@ optim:
           _target_: fvcore.common.param_scheduler.CompositeParamScheduler
           schedulers:
             - _target_: fvcore.common.param_scheduler.LinearParamScheduler
-              start_value: 1e-6 # 1e-8
-              end_value: 1e-4 # 5e-5
+              start_value: 1e-8
+              end_value: 5e-5
             - _target_: fvcore.common.param_scheduler.CosineParamScheduler
-              start_value: 1e-4 # 5e-5
-              end_value: 1e-6 # 1e-8
-          lengths: [0.05, 0.95] # warmup?
+              start_value: 5e-5
+              end_value: 1e-8
+          lengths: [0.05, 0.95]
           interval_scaling: ['rescaled', 'rescaled']
     weight_decay:
       - scheduler:
@@ -168,7 +166,7 @@ optim:
 
 
 
-max_epochs: 100
+max_epochs: 20
 
 model:
   _target_: vggt.models.vggt.VGGT

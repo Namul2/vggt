@@ -69,7 +69,8 @@ class BaseDataset(Dataset):
         """
         seq_index, img_per_seq, aspect_ratio = idx_N
         return self.get_data(
-            seq_index=seq_index, img_per_seq=img_per_seq, aspect_ratio=aspect_ratio
+            # seq_index=seq_index, img_per_seq=img_per_seq, aspect_ratio=aspect_ratio
+            img_per_seq=img_per_seq, aspect_ratio=aspect_ratio #TODO debug to use inside_random index
         )
 
     def get_data(self, seq_index=None, seq_name=None, ids=None, aspect_ratio=1.0):

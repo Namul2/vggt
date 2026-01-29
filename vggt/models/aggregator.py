@@ -62,7 +62,7 @@ class Aggregator(nn.Module):
         qkv_bias=True,
         proj_bias=True,
         ffn_bias=True,
-        patch_embed="dinov2_vitl14_reg",
+        patch_embed="dinov2_vits14_reg", # dinov2_vitl14_reg
         aa_order=["frame", "global"],
         aa_block_size=1,
         qk_norm=True,
@@ -126,6 +126,9 @@ class Aggregator(nn.Module):
         # The same applies for register tokens
         self.camera_token = nn.Parameter(torch.randn(1, 2, 1, embed_dim))
         self.register_token = nn.Parameter(torch.randn(1, 2, num_register_tokens, embed_dim))
+
+        # debug
+        print(f"embed_dim: {embed_dim}")
 
         # The patch tokens start after the camera and register tokens
         self.patch_start_idx = 1 + num_register_tokens
@@ -201,7 +204,7 @@ class Aggregator(nn.Module):
         images = (images - self._resnet_mean) / self._resnet_std
 
         # Reshape to [B*S, C, H, W] for patch embedding
-        images = images.view(B * S, C_in, H, W)
+        images = images.view(B * S, C_in, H, W) # batch size x sequence length, channels, height, width
         patch_tokens = self.patch_embed(images)
 
         if isinstance(patch_tokens, dict):

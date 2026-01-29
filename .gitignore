@@ -147,3 +147,11 @@ skyseg.onnx
 # pixi environments
 .pixi
 *.egg-info
+
+# namul2
+.vscode
+training/logs
+log*.txt
+err*.txt
+wandb
+ff3d_dataset

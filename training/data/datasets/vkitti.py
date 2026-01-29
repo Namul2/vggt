@@ -107,11 +107,18 @@ class VKittiDataset(BaseDataset):
         Returns:
             dict: A batch of data including images, depths, and other metadata.
         """
-        if self.inside_random and self.training:
+        if self.inside_random and self.training or seq_index is None:
             seq_index = random.randint(0, self.sequence_list_len - 1)
+        else:
+            seq_index = seq_index % self.sequence_list_len # for safety
+        #TODO [error] another problem happens here, Worker seed: 13438 -> it loops in here. keep getting data from somewhere...? without updating weights
+        # it was proceesing dataloader in trainer.py
+        
+        # debug
+        # print(f"sequence length: {self.sequence_list_len}, seq_index: {seq_index}")
 
         if seq_name is None:
-            seq_name = self.sequence_list[seq_index]
+            seq_name = self.sequence_list[seq_index] #TODO [error] list index out of range
 
         camera_id = int(seq_name[-1])
 
