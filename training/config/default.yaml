@@ -1,7 +1,7 @@
 defaults:
   - default_dataset.yaml
 
-exp_name: vggt_vkitti_vit_multigpu
+exp_name: vggt_vkitti_vit_multigpu_debug2
 img_size: 518
 num_workers: 4
 seed_value: 42
@@ -12,7 +12,7 @@ max_img_per_gpu: 24 # 48 default
 
 #TODO about limit batches, I actually don't get it. should I set it null for scratch training?
 limit_train_batches: null # null == training...? for graident accumulation it should be divisible by accum_steps
-limit_val_batches: null # 400
+limit_val_batches: 360 # 400
 
 
 data:

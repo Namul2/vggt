@@ -495,8 +495,11 @@ class Trainer:
                     dtype=amp_type,
                 ):
                     val_loss_dict = self._step(
-                        batch, self.model, phase, loss_meters
+                        batch, self.model, phase, loss_meters,
+                        step=self.steps[phase],
+                        log_to_wandb=False
                     )
+            self.steps[phase] += 1 #TODO val step increase
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -511,7 +514,14 @@ class Trainer:
 
             if data_iter % self.logging_conf.log_freq == 0:
                 progress.display(data_iter)
-
+                          
+        if self.rank == 0:
+            val_matrics = {"epoch": self.epoch}
+            for name, meter in loss_meters.items():
+                clean_name = name.replace("Loss/val_", "val/")
+                val_matrics[clean_name] = meter.avg
+            print(val_matrics)
+            self.wandb.log(val_matrics)
 
         return True
 
@@ -605,7 +615,10 @@ class Trainer:
                 logging.warning(
                     f"Skipping scheduler update since the training is at the end, i.e, {self.where} of [0,1]."
                 )
-                    
+            
+            #TODO not sure about this;;
+            current_step = self.steps[phase] - 1
+
             # Log schedulers
             if self.steps[phase] % self.logging_conf.log_freq == 0:
                 wandb_optim_log = {} # wandb logging dictionary
@@ -640,7 +653,7 @@ class Trainer:
                 # wandb logging
                 if self.rank == 0:
                     self.wandb.log(
-                        wandb_optim_log, step=self.steps[phase]
+                        wandb_optim_log #, step=current_step
                     )
 
             # Clipping gradients and detecting diverging gradients
@@ -657,7 +670,7 @@ class Trainer:
                 if self.rank == 0:
                     self.wandb.log({
                         f"grad/{key}": grad_norm for key, grad_norm in grad_norm_dict.items()
-                    }, step=self.steps[phase])
+                    }) # step=self.steps[phase])
 
             # Optimizer step
             for optim in self.optims:   
@@ -700,6 +713,10 @@ class Trainer:
             amp_type = torch.bfloat16
         else:
             amp_type = torch.float16
+
+        # try to fix wandb log error
+        current_step = self.steps[phase]
+        self.steps[phase] += 1
         
         for i, chunked_batch in enumerate(chunked_batches):
             ddp_context = (
@@ -715,7 +732,8 @@ class Trainer:
                 ):
                     loss_dict = self._step(
                         chunked_batch, self.model, phase, loss_meters,
-                        log_to_wandb=(i == accum_steps - 1)
+                        step=current_step, # try to fix wandb log error
+                        log_to_wandb=(i == accum_steps - 1) # log to wandb only on the last chunk
                     )
 
 
@@ -739,7 +757,7 @@ class Trainer:
         if self.rank == 0:
             self.wandb.log({
                 f"{phase}/loss_objective": accumulated_loss
-            }, step=self.steps[phase]-1)
+            }) #, step=current_step)
 
 
     def _apply_batch_repetition(self, batch: Mapping) -> Mapping:
@@ -788,7 +806,7 @@ class Trainer:
 
         return batch
 
-    def _step(self, batch, model: nn.Module, phase: str, loss_meters: dict, log_to_wandb: bool = True):
+    def _step(self, batch, model: nn.Module, phase: str, loss_meters: dict, step: int, log_to_wandb: bool = True):
         """
         Performs a single forward pass, computes loss, and logs results.
         
@@ -804,8 +822,11 @@ class Trainer:
         # Combine all data for logging
         log_data = {**y_hat, **loss_dict, **batch}
 
-        self._update_and_log_scalars(log_data, phase, self.steps[phase], loss_meters, log_to_wandb)
-        self._log_tb_visuals(log_data, phase, self.steps[phase])
+        self._update_and_log_scalars(log_data, phase, step, loss_meters, log_to_wandb)
+        self._log_tb_visuals(log_data, phase, step)
+
+        # self._update_and_log_scalars(log_data, phase, self.steps[phase], loss_meters, log_to_wandb)
+        # self._log_tb_visuals(log_data, phase, self.steps[phase])
 
         # self.steps[phase] += 1 #TODO verify this, it seems to be add steps in every chunk (so accum > 1 has some problem)
 
@@ -833,7 +854,7 @@ class Trainer:
         if self.rank == 0 and len(wandb_log) > 0 and log_to_wandb:
             wandb_log["step"] = step
             wandb_log["epoch"] = self.epoch
-            self.wandb.log(wandb_log, step=step)
+            self.wandb.log(wandb_log) #, step=step)
 
     def _log_tb_visuals(self, batch: Mapping, phase: str, step: int) -> None:
         """Logs image or video visualizations to TensorBoard."""
